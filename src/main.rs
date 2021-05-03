@@ -26,8 +26,9 @@ async fn main() -> std::io::Result<()> {
         })
     };
 
-    // let port = env::var("PORT").unwrap_or("3000".to_string());
-	let port = 3000;
+    let port = env::var("PORT").unwrap_or("3000".to_string());
+	let ip = "0.0.0.0";
+	
     std::env::set_var("RUST_LOG", "actix_web=debug");
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
     HttpServer::new(move || {
@@ -43,7 +44,7 @@ async fn main() -> std::io::Result<()> {
             .service(get_todo)
             .service(post_todo)
     })
-    .bind(format!("localhost:{}", port))?
+    .bind(format!("{}:{}", ip, port))?
     .run()
     .await
 }
