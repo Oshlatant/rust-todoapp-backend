@@ -9,6 +9,7 @@ use actix_cors::Cors;
 
 use routes::{get_todos, get_todo, post_todo};
 use db::{JsonDb};
+use std::env;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -23,24 +24,26 @@ async fn main() -> std::io::Result<()> {
 		})
 	};
 
-    
+    let port = env::var("PORT").unwrap_or("3000".to_string());
+
+
 	
     HttpServer::new(move || {
 		
 		
-		let cors = Cors::default()
-		.send_wildcard();
+		// let cors = Cors::default()
+		// .send_wildcard();
 
 
 
         App::new()
-            .wrap(cors)
+            // .wrap(cors)
             .app_data(json_db.clone())
             .service(get_todos)
             .service(get_todo)
             .service(post_todo)
     })
-    .bind("127.0.0.1:3000")?
+    .bind(format!("0.0.0.0:{}", port))?
     .run()
     .await
 }
