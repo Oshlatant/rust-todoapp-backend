@@ -27,7 +27,7 @@ async fn main() -> std::io::Result<()> {
     let port = env::var("PORT").unwrap_or("3000".to_string());
 
     HttpServer::new(move || {
-        let cors = Cors::default().allowed_origin("https://todo-app-js-delta.vercel.app/");
+        let cors = Cors::default().send_wildcard();
 
         App::new()
             .wrap(cors)
