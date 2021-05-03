@@ -27,7 +27,7 @@ async fn main() -> std::io::Result<()> {
     let port = env::var("PORT").unwrap_or("3000".to_string());
 
     HttpServer::new(move || {
-        let cors = Cors::default().allow_any_origin();
+        let cors = Cors::permissive().allow_any_origin();
 
         App::new()
             .wrap(cors)
