@@ -1,43 +1,36 @@
-mod routes;
 mod db;
+mod routes;
 mod schemas;
 
-use std::sync::Mutex;
-use std::fs;
-use actix_web::{App, HttpServer, web};
 use actix_cors::Cors;
+use actix_web::{web, App, HttpServer};
+use std::fs;
+use std::sync::Mutex;
 
-use routes::{get_todos, get_todo, post_todo};
-use db::{JsonDb};
+use db::JsonDb;
+use routes::{get_todo, get_todos, post_todo};
 use std::env;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-	let json_db = {
-		// get json file as string ( acting like a db )
-		let db = web::block(|| {
-			fs::read_to_string("./db.json")
-		}).await.unwrap();
+    let json_db = {
+        // get json file as string ( acting like a db )
+        let db = web::block(|| fs::read_to_string("./db.json"))
+            .await
+            .unwrap();
 
-		web::Data::new( JsonDb {
-			content: Mutex::new(db),
-		})
-	};
+        web::Data::new(JsonDb {
+            content: Mutex::new(db),
+        })
+    };
 
     let port = env::var("PORT").unwrap_or("3000".to_string());
 
-
-	
     HttpServer::new(move || {
-		
-		
-		// let cors = Cors::default()
-		// .send_wildcard();
-
-
+        let cors = Cors::default().allowed_origin("https://todo-app-js-delta.vercel.app/");
 
         App::new()
-            // .wrap(cors)
+            .wrap(cors)
             .app_data(json_db.clone())
             .service(get_todos)
             .service(get_todo)

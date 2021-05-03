@@ -1,13 +1,13 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 pub struct Todo {
-	pub content: String,
-	pub checked: String,
-	pub _id: Option<i32>,
+    pub content: String,
+    pub checked: String,
+    pub _id: Option<i32>,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct JsonError {
-	pub error: String,
+    pub error: String,
 }
