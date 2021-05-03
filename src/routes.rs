@@ -39,6 +39,9 @@ async fn post_todo(db: web::Data<JsonDb>, mut todo: web::Json<Todo>) -> impl Res
     let mut db_string = db.content.lock().unwrap();
     let mut db: Vec<Todo> = serde_json::from_str(&*db_string).unwrap();
 
+
+	println!("{}", todo.content);
+
     //update db string
     db.push(todo.0);
     let updated_db_string = serde_json::to_string(&db).unwrap();
