@@ -2,9 +2,19 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 pub struct Todo {
-    pub content: String,
-    pub checked: bool,
+    pub content: Option<String>,
+    pub checked: Option<bool>,
     pub _id: Option<i32>,
+}
+
+impl Clone for Todo {
+    fn clone(&self) -> Self {
+        Todo {
+            content: self.content.clone(),
+            checked: self.checked,
+            _id: self._id,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize)]

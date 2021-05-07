@@ -1,34 +1,42 @@
-use super::db::{random_id, JsonDb};
-use super::schemas::{JsonError, Todo};
-use actix_web::{delete, get, patch, post, web, HttpResponse, Responder};
-use std::fs;
+use super::db::{self, random_id, JsonDb};
+use super::schemas::{ Todo};
+use actix_web::web::{self, Json};
+use actix_web::{delete, get, patch, post, HttpResponse, Responder};
 
 #[get("/todos")]
 async fn get_todos(db: web::Data<JsonDb>) -> impl Responder {
-    let db_content = db.content.lock().unwrap();
+    let todo_list = db.content.lock().unwrap();
 
-    HttpResponse::Ok().body(&*db_content)
+    let todo_list = db::todo_hashmap_vec(&todo_list);
+    let todo_list = serde_json::to_string(&todo_list).unwrap();
+
+    HttpResponse::Ok().body(todo_list)
 }
 
 #[get("/todos/{id}")]
-async fn get_todo(web::Path(id): web::Path<i32>, db: web::Data<JsonDb>) -> impl Responder {
-    let db_content = db.content.lock().unwrap();
-    let todos_list: Vec<Todo> = serde_json::from_str(&*db_content).unwrap();
+async fn get_todo(
+    web::Path(id): web::Path<i32>,
+    db: web::Data<JsonDb>,
+) -> actix_web::Result<Json<Todo>> {
+    //init
+    let mut todo_list = db.content.lock().unwrap();
 
     //find the todo with the good id and make it as string
-    let wanted_todo = todos_list.iter().find(|todo| todo._id == Some(id));
-    let wanted_todo = wanted_todo.map(|t| serde_json::to_string(t).unwrap());
+    // let wanted_todo = todo_list.iter().find(|todo| todo._id == Some(id));
+    // let wanted_todo = wanted_todo.map(|t| serde_json::to_string(t).unwrap());
 
-    //respond the todo if found
-    match wanted_todo {
-        Some(todo) => HttpResponse::Ok().body(todo),
-        None => {
-            let json_error = serde_json::to_string(&JsonError {
-                error: "Todo not found".to_string(),
-            })
-            .unwrap();
-            HttpResponse::NotFound().body(json_error)
+    let todo = todo_list.remove_entry(&id.to_string());
+
+    match todo {
+        Some((id, todo)) => {
+            todo_list.insert(id, todo.clone());
+            Ok(Json(todo))
         }
+        None => Ok(Json(Todo {
+            content: Some("Error".to_string()),
+            checked: Some(false),
+            _id: Some(id),
+        })),
     }
 }
 
@@ -36,33 +44,69 @@ async fn get_todo(web::Path(id): web::Path<i32>, db: web::Data<JsonDb>) -> impl 
 async fn post_todo(db: web::Data<JsonDb>, mut todo: web::Json<Todo>) -> impl Responder {
     //init
     todo._id = Some(random_id());
-    let mut db_string = db.content.lock().unwrap();
-    let mut db: Vec<Todo> = serde_json::from_str(&*db_string).unwrap();
+    let mut todo_list = db.content.lock().unwrap();
+    let response = serde_json::to_string(&todo.0).unwrap();
 
-
-	println!("{}", todo.content);
-
-    //update db string
-    db.push(todo.0);
-    let updated_db_string = serde_json::to_string(&db).unwrap();
-    *db_string = updated_db_string.clone();
+    //update db hashmap
+    todo_list.insert(todo._id.unwrap().to_string(), todo.0);
 
     //write in db.json
-    web::block(|| fs::write("./db.json", updated_db_string))
-        .await
-        .unwrap();
+    let db_string = serde_json::to_string(&*todo_list).unwrap();
+    db::update_db(db_string).await;
 
-    //give the last todo ( new one ) as response
-    let response = serde_json::to_string(&db.last()).unwrap();
     HttpResponse::Created().body(response)
 }
 
-// #[patch("/todos/{id}")]
-// async fn patch_todo() -> impl HttpResponse {
+#[patch("/todos/{id}")]
+async fn patch_todo(
+    web::Path(id): web::Path<i32>,
+    db: web::Data<JsonDb>,
+    patched_todo: web::Json<Todo>,
+) -> actix_web::Result<Json<Todo>> {
+    //init
+    let mut todo_list = db.content.lock().unwrap();
 
-// }
+    let todo = todo_list.remove(&id.to_string());
 
-// #[delete("/todos/{id}")]
-// async fn delete_todo() -> impl HttpResponse {
+    match todo {
+        Some(mut todo) => {
+			//patch the todo
+            todo.checked = patched_todo.checked;
 
-// }
+			//reinsert the todo patched
+            todo_list.insert(id.to_string(), todo.clone());
+
+			//update the db.json 
+			db::update_db(serde_json::to_string(&*todo_list).unwrap()).await;
+
+			//response the todo patched
+            Ok(Json(todo))
+        }
+        None => Ok(Json(Todo {
+            content: Some("Error".to_string()),
+            checked: Some(false),
+            _id: Some(id),
+        })),
+    }
+}
+
+#[delete("/todos/{id}")]
+async fn delete_todo(
+	web::Path(id): web::Path<i32>,
+	db: web::Data<JsonDb>,
+) -> impl Responder {
+	let mut todo_list = db.content.lock().unwrap();
+
+    let todo = todo_list.remove(&id.to_string());
+
+    match todo {
+        Some( _todo) => {
+			//update the db.json 
+			db::update_db(serde_json::to_string(&*todo_list).unwrap()).await;
+
+			//response the todo patched
+            HttpResponse::Accepted()
+        }
+        None => HttpResponse::NotFound(),
+    }
+}
