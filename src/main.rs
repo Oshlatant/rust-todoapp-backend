@@ -1,6 +1,7 @@
 mod db;
 mod routes;
 mod schemas;
+mod utils;
 
 use actix_cors::Cors;
 use actix_web::{App, HttpServer, web};
@@ -30,8 +31,8 @@ async fn main() -> std::io::Result<()> {
     };
 
     let port = env::var("PORT").unwrap_or("3000".to_string());
-    let ip = "0.0.0.0";
-    // let ip = "localhost";
+    // let ip = "0.0.0.0";
+    let ip = "localhost";
 
     std::env::set_var("RUST_LOG", "actix_web=debug");
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
