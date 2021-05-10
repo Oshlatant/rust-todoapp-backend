@@ -1,6 +1,6 @@
-use random_number::random_ranged;
-use std::{collections::HashMap, sync::Mutex, fs};
 use actix_web::web;
+use random_number::random_ranged;
+use std::{collections::HashMap, fs, sync::Mutex};
 
 use super::schemas::Todo;
 
@@ -24,5 +24,5 @@ pub fn random_id() -> i32 {
 // }
 
 pub async fn update_db(db: String) {
-	web::block(|| fs::write("./db.json", db)).await.unwrap();
+    web::block(|| fs::write("./db.json", db)).await.unwrap();
 }

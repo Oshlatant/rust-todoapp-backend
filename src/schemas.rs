@@ -1,12 +1,10 @@
-
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 pub struct ApiResponse<T> {
-	pub status: String,
-	pub data: T
+    pub status: String,
+    pub data: T,
 }
-
 
 #[derive(Serialize, Deserialize)]
 pub struct Todo {
@@ -29,4 +27,3 @@ impl Clone for Todo {
 pub struct ApiError {
     pub error: String,
 }
-

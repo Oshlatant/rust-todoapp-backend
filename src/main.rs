@@ -9,10 +9,10 @@ use std::sync::Mutex;
 use std::{fs};
 use db::JsonDb;
 
-use routes::{get_todo, get_todos, patch_todo, post_todo, delete_todo};
+use routes::{todos_config};
 use std::env;
 
-use actix_web::middleware::Logger;
+use actix_web::middleware::{normalize::NormalizePath, Logger};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -44,12 +44,11 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(Logger::default())
             .wrap(cors)
+            .wrap(NormalizePath::default())
             .app_data(json_db.clone())
-            .service(get_todos)
-            .service(get_todo)
-            .service(post_todo)
-            .service(patch_todo)
-            .service(delete_todo)
+            .service(web::scope("/todos/").configure(todos_config))
+            .service(web::resource("/test/").route(web::get().to(|| actix_web::HttpResponse::Ok().body("test"))))
+            
     })
     .bind(format!("{}:{}", ip, port))?
     .run()
