@@ -7,6 +7,11 @@ pub struct ApiResponse<T> {
 }
 
 #[derive(Serialize, Deserialize)]
+pub struct ApiError {
+	pub error: String,
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct Todo {
     pub content: Option<String>,
     pub checked: Option<bool>,
@@ -23,7 +28,3 @@ impl Clone for Todo {
     }
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct ApiError {
-    pub error: String,
-}
