@@ -64,7 +64,10 @@ async fn post_todo(db: web::Data<Database>, todo: web::Json<Todo>) -> impl Respo
     let result = todo_list.insert_one(todo.clone(), None).await;
 	
 	match result {
-		Ok(_) => {
+		Ok(result) => {
+
+			println!(" ???? {:?}", result);
+
 			let response = ApiResponse {
 				status: "success".to_string(),
 				data: todo,
@@ -72,7 +75,10 @@ async fn post_todo(db: web::Data<Database>, todo: web::Json<Todo>) -> impl Respo
 	
 			HttpResponse::Created().json(response)
 		},
-		Err(_) => {
+		Err(e) => {
+
+			eprintln!("error when post: {}", e);
+
 			let response = ApiResponse {
 				status: "failure".to_string(),
 				data: serde_json::Value::Null,
