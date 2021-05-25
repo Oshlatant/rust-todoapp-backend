@@ -1,6 +1,9 @@
 use super::schemas::{ApiError, ApiResponse};
 use actix_web::HttpResponse;
 
+use mongodb::bson::{self, Document};
+use serde::{Serialize, Deserialize};
+
 pub fn todo_not_found() -> HttpResponse {
     let error = ApiError {
         error: "Todo not found".to_string(),
@@ -13,3 +16,9 @@ pub fn todo_not_found() -> HttpResponse {
 
     HttpResponse::NotFound().json(response)
 }
+
+// pub fn json_to_doc<T: Serialize>(json: T) -> Document {
+// 	let document = bson::to_document(&json).expect("failed to convert json to doc");
+
+// 	document
+// }

@@ -7,8 +7,10 @@ use actix_cors::Cors;
 use actix_web::{App, HttpServer, web};
 use std::sync::Mutex;
 use std::{fs};
-use db::JsonDb;
+use mongodb::{Client, Collection, bson::{Document, doc}};
 
+
+use db::Database;
 use routes::{todos_config};
 use std::env;
 
@@ -16,17 +18,13 @@ use actix_web::middleware::{normalize::NormalizePath, Logger};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let json_db = {
-        // get json file as string ( acting like a db )
-        let db = web::block(|| fs::read_to_string("./db.json"))
-            .await
-            .unwrap();
+    let database = {
 
-        // let json: Vec<Todo> = serde_json::from_str(&db).unwrap_or_else(|e| panic!("error: {}", e));
-        let db = serde_json::from_str(&db).unwrap();
 
-        web::Data::new(JsonDb {
-            content: Mutex::new(db),
+		let client = Client::with_uri_str("mongodb://localhost:27017/").await.expect("failed to connect");
+		let collection = client.database("todos").collection("todos");
+        web::Data::new(Database {
+            content: Mutex::new(collection),
         })
     };
 
@@ -45,7 +43,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .wrap(cors)
             .wrap(NormalizePath::default())
-            .app_data(json_db.clone())
+            .app_data(database.clone())
             .service(web::scope("/todos/").configure(todos_config))
             .service(web::resource("/test/").route(web::get().to(|| actix_web::HttpResponse::Ok().body("test"))))
             
