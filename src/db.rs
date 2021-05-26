@@ -1,10 +1,5 @@
 use futures::StreamExt;
-use mongodb::{bson::Document, Client, Cursor};
-use std::sync::Mutex;
-
-pub struct Database {
-    pub content: Mutex<Client>,
-}
+use mongodb::{bson::Document, Cursor};
 
 pub async fn to_vector(cursor: &mut Cursor<Document>) -> Vec<Document> {
     let mut document_list = Vec::new();

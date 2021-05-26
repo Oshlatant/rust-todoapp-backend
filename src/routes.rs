@@ -1,6 +1,6 @@
 use crate::schemas::UpdateChecked;
 
-use super::db::{self, Database};
+use super::db;
 use super::schemas::{ApiResponse, ClientTodo, Todo};
 use super::utils;
 use actix_web::web;
@@ -8,6 +8,7 @@ use actix_web::{HttpResponse, Responder};
 
 use mongodb::bson::oid;
 use mongodb::bson::{self, doc};
+use mongodb::Client;
 
 const DATABASE: &str = "todoapp";
 const COLLECTION: &str = "todos";
@@ -27,11 +28,8 @@ pub fn todos_config(cfg: &mut web::ServiceConfig) {
     );
 }
 
-async fn get_todos(db: web::Data<Database>) -> impl Responder {
-    let todo_list = db
-        .content
-        .lock()
-        .unwrap()
+async fn get_todos(client: web::Data<Client>) -> impl Responder {
+    let todo_list = client
         .database(DATABASE)
         .collection(COLLECTION);
 
@@ -52,12 +50,9 @@ async fn get_todos(db: web::Data<Database>) -> impl Responder {
     HttpResponse::Ok().json(response)
 }
 
-async fn get_todo(web::Path(id): web::Path<String>, db: web::Data<Database>) -> impl Responder {
+async fn get_todo(web::Path(id): web::Path<String>, client: web::Data<Client>) -> impl Responder {
     //init
-    let todo_list = db
-        .content
-        .lock()
-        .unwrap()
+    let todo_list = client
         .database(DATABASE)
         .collection(COLLECTION);
 
@@ -85,11 +80,8 @@ async fn get_todo(web::Path(id): web::Path<String>, db: web::Data<Database>) -> 
     }
 }
 
-async fn post_todo(db: web::Data<Database>, todo: web::Json<ClientTodo>) -> impl Responder {
-    let todo_list = db
-        .content
-        .lock()
-        .unwrap()
+async fn post_todo(client: web::Data<Client>, todo: web::Json<ClientTodo>) -> impl Responder {
+    let todo_list = client
         .database(DATABASE)
         .collection(COLLECTION);
     let todo = bson::to_document(&todo.0).expect("failed to convert");
@@ -123,14 +115,11 @@ async fn post_todo(db: web::Data<Database>, todo: web::Json<ClientTodo>) -> impl
 
 async fn patch_todo(
     web::Path(id): web::Path<String>,
-    db: web::Data<Database>,
+    client: web::Data<Client>,
     patched_todo: web::Json<UpdateChecked>,
 ) -> impl Responder {
     //init
-    let todo_list = db
-        .content
-        .lock()
-        .unwrap()
+    let todo_list = client
         .database(DATABASE)
         .collection(COLLECTION);
 
@@ -176,11 +165,8 @@ async fn patch_todo(
     }
 }
 
-async fn delete_todo(web::Path(id): web::Path<String>, db: web::Data<Database>) -> impl Responder {
-    let todo_list = db
-        .content
-        .lock()
-        .unwrap()
+async fn delete_todo(web::Path(id): web::Path<String>, client: web::Data<Client>) -> impl Responder {
+    let todo_list = client
         .database(DATABASE)
         .collection(COLLECTION);
     let id = oid::ObjectId::with_string(&id).expect("failed to id");

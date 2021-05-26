@@ -4,28 +4,20 @@ mod schemas;
 mod utils;
 
 use std::env;
-use std::sync::Mutex;
 
 use actix_cors::Cors;
 use actix_web::middleware::{normalize::NormalizePath, Logger};
 use actix_web::{web, App, HttpServer};
 use mongodb::Client;
 
-use db::Database;
 use routes::todos_config;
 
 const IP: &str = "mongodb://localhost:27017/";
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let database = {
-        let client = Client::with_uri_str(IP).await.expect("failed to connect");
-
-        web::Data::new(Database {
-            content: Mutex::new(client),
-        })
-    };
-
+	
+	let client = Client::with_uri_str(IP).await.expect("failed to connect");
     let port = env::var("PORT").unwrap_or("3000".to_string());
     let ip = "0.0.0.0";
     // let ip = "localhost";
@@ -43,7 +35,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .wrap(cors)
             .wrap(NormalizePath::default())
-            .app_data(database.clone())
+            .app_data(client.clone())
             .service(web::scope("/todos/").configure(todos_config))
             .service(
                 web::resource("/test/")
