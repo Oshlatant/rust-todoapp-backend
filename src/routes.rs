@@ -1,10 +1,19 @@
-use super::db::{self, random_id, Database, format_cursor};
-use super::schemas::{ApiResponse, Todo};
+use crate::schemas::UpdateChecked;
+
+use super::db::{self, Database};
+use super::schemas::{ApiResponse, ClientTodo, Todo};
 use super::utils;
 use actix_web::web;
 use actix_web::{HttpResponse, Responder};
-use futures::StreamExt;
-use mongodb::{ bson::{self, doc, Document}};
+
+use mongodb::bson::oid;
+use mongodb::{ bson::{self, doc}};
+
+
+
+
+const DATABASE: &str = "todoapp";
+const COLLECTION: &str = "todos";
 
 pub fn todos_config(cfg: &mut web::ServiceConfig) {
 	cfg.service(web::resource("")
@@ -21,11 +30,15 @@ pub fn todos_config(cfg: &mut web::ServiceConfig) {
 }
 
 async fn get_todos(db: web::Data<Database>) -> impl Responder {
-    let todo_list = db.content.lock().unwrap();
+    let todo_list = db.content.lock().unwrap().database(DATABASE).collection(COLLECTION);
 
 	let mut todo_list = todo_list.find(None, None).await.unwrap();
 	
-	let todo_list = format_cursor(&mut todo_list).await;
+	let todo_list = db::to_vector(&mut todo_list).await;
+
+	let todo_list: Vec<Todo> = todo_list.iter().map(|document| {
+		Todo::from(document.clone(), None)
+	}).collect();
 
     let response = ApiResponse {
         status: "success".to_string(),
@@ -35,12 +48,16 @@ async fn get_todos(db: web::Data<Database>) -> impl Responder {
     HttpResponse::Ok().json(response)
 }
 
-async fn get_todo(web::Path(id): web::Path<i32>, db: web::Data<Database>) -> impl Responder {
+async fn get_todo(web::Path(id): web::Path<String>, db: web::Data<Database>) -> impl Responder {
     //init
-    let todo_list = db.content.lock().unwrap();
+    let todo_list = db.content.lock().unwrap().database(DATABASE).collection(COLLECTION);
 
-    //remove the todo from db state if found
-    let todo = todo_list.find_one(doc! {"id": id}, None).await.unwrap();
+	let id = oid::ObjectId::with_string(&id).expect("failed to id");
+
+	println!("id en question: {:?}", id);
+
+
+    let todo = todo_list.find_one(Some(doc! {"_id": id}), None).await.unwrap();
 
     match todo {
         Some(todo) => {
@@ -49,6 +66,8 @@ async fn get_todo(web::Path(id): web::Path<i32>, db: web::Data<Database>) -> imp
                 data: todo,
             };
 
+			println!("found");
+
             HttpResponse::Found().json(response)
         }
         None => utils::todo_not_found(),
@@ -56,17 +75,16 @@ async fn get_todo(web::Path(id): web::Path<i32>, db: web::Data<Database>) -> imp
 }
 
 
-async fn post_todo(db: web::Data<Database>, todo: web::Json<Todo>) -> impl Responder {
-    let todo_list = db.content.lock().unwrap();
-
+async fn post_todo(db: web::Data<Database>, todo: web::Json<ClientTodo>) -> impl Responder {
+    let todo_list = db.content.lock().unwrap().database(DATABASE).collection(COLLECTION);
 	let todo = bson::to_document(&todo.0).expect("failed to convert");
 	
     let result = todo_list.insert_one(todo.clone(), None).await;
 	
 	match result {
 		Ok(result) => {
-
-			println!(" ???? {:?}", result);
+			let id = result.inserted_id.as_object_id();
+			let todo = Todo::from(todo, id);
 
 			let response = ApiResponse {
 				status: "success".to_string(),
@@ -90,17 +108,21 @@ async fn post_todo(db: web::Data<Database>, todo: web::Json<Todo>) -> impl Respo
 }
 
 async fn patch_todo(
-    web::Path(id): web::Path<i32>,
+    web::Path(id): web::Path<String>,
     db: web::Data<Database>,
-    patched_todo: web::Json<Todo>,
+    patched_todo: web::Json<UpdateChecked>,
 ) -> impl Responder {
     //init
-    let todo_list = db.content.lock().unwrap();
+    let todo_list = db.content.lock().unwrap().database(DATABASE).collection(COLLECTION);
 
-	let update = bson::to_document(&patched_todo.0).expect("failed to convert");
+	let update = doc! { "$set": {"checked": patched_todo.checked.unwrap()} };
+
+	let id = oid::ObjectId::with_string(&id).expect("failed to id");
+
+	println!("{:?}", update);
 
 
-    let result = todo_list.find_one_and_update(doc! {"id": id}, update , None).await;
+    let result = todo_list.find_one_and_update(doc! {"_id": id}, update , None).await;
 
 	match result {
 		Ok(todo) => {
@@ -124,7 +146,10 @@ async fn patch_todo(
 			}
 
 		},
-		Err(_) => {
+		Err(e) => {
+
+			println!("fail fail fail {}", e);
+
 			let response = ApiResponse {
 				status: "failure".to_string(),
 				data: serde_json::Value::Null,
@@ -135,10 +160,10 @@ async fn patch_todo(
 	}
 }
 
-async fn delete_todo(web::Path(id): web::Path<i32>, db: web::Data<Database>) -> impl Responder {
-    let todo_list = db.content.lock().unwrap();
-
-    let result = todo_list.find_one_and_delete(doc! { "id": id}, None).await;
+async fn delete_todo(web::Path(id): web::Path<String>, db: web::Data<Database>) -> impl Responder {
+    let todo_list = db.content.lock().unwrap().database(DATABASE).collection(COLLECTION);
+	let id = oid::ObjectId::with_string(&id).expect("failed to id");
+    let result = todo_list.find_one_and_delete(doc! { "_id": id}, None).await;
 
     match result {
         Ok(_) => {
@@ -149,7 +174,10 @@ async fn delete_todo(web::Path(id): web::Path<i32>, db: web::Data<Database>) -> 
 
             HttpResponse::Accepted().json(response)
         }
-        Err(_) => {
+        Err(e) => {
+
+			eprintln!("{}", e);
+
 			let response = ApiResponse {
 				status: "fail".to_string(),
 				data: serde_json::Value::Null,

@@ -3,34 +3,41 @@ mod routes;
 mod schemas;
 mod utils;
 
-use actix_cors::Cors;
-use actix_web::{App, HttpServer, web};
 use std::sync::Mutex;
-use std::{fs};
-use mongodb::{Client, Collection, bson::{Document, doc}};
+use std::env;
+
+
+use actix_web::middleware::{normalize::NormalizePath, Logger};
+use actix_web::{App, HttpServer, web};
+use actix_cors::Cors;
+use mongodb::{Client};
 
 
 use db::Database;
 use routes::{todos_config};
-use std::env;
 
-use actix_web::middleware::{normalize::NormalizePath, Logger};
+const IP: &str = "mongodb://localhost:27017/";
+
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let database = {
 
 
-		let client = Client::with_uri_str("mongodb://localhost:27017/").await.expect("failed to connect");
-		let collection = client.database("todos").collection("todos");
+		let client = Client::with_uri_str(IP).await.expect("failed to connect");
+		
         web::Data::new(Database {
-            content: Mutex::new(collection),
+            content: Mutex::new(client),
         })
     };
 
     let port = env::var("PORT").unwrap_or("3000".to_string());
     let ip = "0.0.0.0";
     // let ip = "localhost";
+
+
+	println!("Server running on port: {}", port);
+
 
     std::env::set_var("RUST_LOG", "actix_web=debug");
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));

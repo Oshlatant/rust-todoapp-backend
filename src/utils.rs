@@ -1,9 +1,6 @@
 use super::schemas::{ApiError, ApiResponse};
 use actix_web::HttpResponse;
 
-use mongodb::bson::{self, Document};
-use serde::{Serialize, Deserialize};
-
 pub fn todo_not_found() -> HttpResponse {
     let error = ApiError {
         error: "Todo not found".to_string(),
