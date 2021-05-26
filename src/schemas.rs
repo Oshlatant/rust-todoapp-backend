@@ -1,5 +1,5 @@
+use mongodb::bson::{self, from_document, Document};
 use serde::{Deserialize, Serialize};
-use mongodb::bson::{self, Document, from_document};
 
 #[derive(Serialize, Deserialize)]
 pub struct ApiResponse<T> {
@@ -9,12 +9,12 @@ pub struct ApiResponse<T> {
 
 #[derive(Serialize, Deserialize)]
 pub struct ApiError {
-	pub error: String,
+    pub error: String,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct UpdateChecked {
-	pub checked: Option<bool>,
+    pub checked: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -26,33 +26,30 @@ pub struct ClientTodo {
 pub struct Todo {
     pub content: Option<String>,
     pub checked: Option<bool>,
-	pub id: Option<String>,
+    pub id: Option<String>,
 }
 
 impl ClientTodo {
-
-	pub fn to_todo(self, id: String) -> Todo {
-		Todo {
-			content: self.content,
-			checked: self.checked,
-			id: Some(id),
-		}
-	}
-
+    pub fn to_todo(self, id: String) -> Todo {
+        Todo {
+            content: self.content,
+            checked: self.checked,
+            id: Some(id),
+        }
+    }
 }
 
-
 impl Todo {
-	pub fn from(document: Document, id: Option<&bson::oid::ObjectId>) -> Todo {
-		let id = match id {
-			Some(id) => id.to_string(),
-			None => document.get_object_id("_id").expect("no id").to_string(),
-		};
+    pub fn from(document: Document, id: Option<&bson::oid::ObjectId>) -> Todo {
+        let id = match id {
+            Some(id) => id.to_string(),
+            None => document.get_object_id("_id").expect("no id").to_string(),
+        };
 
-		let todo: ClientTodo = from_document(document).expect("failed to convert todo");
+        let todo: ClientTodo = from_document(document).expect("failed to convert todo");
 
-		todo.to_todo(id)
-	}
+        todo.to_todo(id)
+    }
 }
 
 impl Clone for ClientTodo {
@@ -63,4 +60,3 @@ impl Clone for ClientTodo {
         }
     }
 }
-

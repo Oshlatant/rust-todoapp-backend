@@ -3,29 +3,24 @@ mod routes;
 mod schemas;
 mod utils;
 
-use std::sync::Mutex;
 use std::env;
+use std::sync::Mutex;
 
-
-use actix_web::middleware::{normalize::NormalizePath, Logger};
-use actix_web::{App, HttpServer, web};
 use actix_cors::Cors;
-use mongodb::{Client};
-
+use actix_web::middleware::{normalize::NormalizePath, Logger};
+use actix_web::{web, App, HttpServer};
+use mongodb::Client;
 
 use db::Database;
-use routes::{todos_config};
+use routes::todos_config;
 
 const IP: &str = "mongodb://localhost:27017/";
-
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let database = {
+        let client = Client::with_uri_str(IP).await.expect("failed to connect");
 
-
-		let client = Client::with_uri_str(IP).await.expect("failed to connect");
-		
         web::Data::new(Database {
             content: Mutex::new(client),
         })
@@ -35,9 +30,7 @@ async fn main() -> std::io::Result<()> {
     let ip = "0.0.0.0";
     // let ip = "localhost";
 
-
-	println!("Server running on port: {}", port);
-
+    println!("Server running on port: {}", port);
 
     std::env::set_var("RUST_LOG", "actix_web=debug");
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
@@ -52,8 +45,10 @@ async fn main() -> std::io::Result<()> {
             .wrap(NormalizePath::default())
             .app_data(database.clone())
             .service(web::scope("/todos/").configure(todos_config))
-            .service(web::resource("/test/").route(web::get().to(|| actix_web::HttpResponse::Ok().body("test"))))
-            
+            .service(
+                web::resource("/test/")
+                    .route(web::get().to(|| actix_web::HttpResponse::Ok().body("test"))),
+            )
     })
     .bind(format!("{}:{}", ip, port))?
     .run()
