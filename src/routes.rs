@@ -58,10 +58,8 @@ async fn get_todo(web::Path(id): web::Path<String>, client: web::Data<Client>) -
 
     let id = oid::ObjectId::with_string(&id).expect("failed to id");
 
-    println!("id en question: {:?}", id);
-
     let todo = todo_list
-        .find_one(Some(doc! {"_id": id}), None)
+        .find_one(Some(doc! {"_id": &id}), None)
         .await
         .unwrap();
 
@@ -69,7 +67,7 @@ async fn get_todo(web::Path(id): web::Path<String>, client: web::Data<Client>) -
         Some(todo) => {
             let response = ApiResponse {
                 status: "success".to_string(),
-                data: todo,
+                data: Todo::from(todo, Some(&id)),
             };
 
             println!("found");
@@ -130,7 +128,7 @@ async fn patch_todo(
     println!("{:?}", update);
 
     let result = todo_list
-        .find_one_and_update(doc! {"_id": id}, update, None)
+        .find_one_and_update(doc! {"_id": &id}, update, None)
         .await;
 
     match result {
@@ -138,7 +136,7 @@ async fn patch_todo(
             Some(todo) => {
                 let response = ApiResponse {
                     status: "success".to_string(),
-                    data: todo,
+                    data: Todo::from(todo, Some(&id)),
                 };
 
                 HttpResponse::Created().json(response)

@@ -12,12 +12,12 @@ use mongodb::Client;
 
 use routes::todos_config;
 
-const IP: &str = "mongodb://localhost:27017/";
+const DB_IP: &str = "mongodb://localhost:27017/";
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
 	
-	let client = Client::with_uri_str(IP).await.expect("failed to connect");
+	let client = Client::with_uri_str(DB_IP).await.expect("failed to connect");
     let port = env::var("PORT").unwrap_or("3000".to_string());
     let ip = "0.0.0.0";
     // let ip = "localhost";
@@ -35,7 +35,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .wrap(cors)
             .wrap(NormalizePath::default())
-            .app_data(client.clone())
+            .data(client.clone())
             .service(web::scope("/todos/").configure(todos_config))
             .service(
                 web::resource("/test/")
